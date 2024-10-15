@@ -15,15 +15,15 @@ def quiz():
 
         # Afficher la phrase en français à traduire
         print(f"Traduisez cette phrase:\n\n{textwrap.fill(phrase_fr, width=40)}")
-        user_input = input("\n\nVotre réponse (relancer ',' / arrêter 'stop'): ")
+        user_input = input("\n\nVotre réponse (relancer ',' / arrêter 'stop') : ")
 
-        if (user_input == "stop")
+        if user_input == "stop" :
             break;
 
         # Permettre à l'utilisateur de corriger sa réponse si nécessaire
         while len(user_input) > 0 and user_input[-1] == ',':
             print(f"Traduisez cette phrase:\n\n{textwrap.fill(phrase_fr, width=40)}")
-            user_input = input("\n\nVotre réponse (relancer ','): ")
+            user_input = input("\n\nVotre réponse (relancer ',') : ")
 
         # Ajouter un point si la réponse ne se termine pas par un point
         if len(user_input) > 1:
