@@ -1,12 +1,6 @@
 import re
 
-from src.print_functions import print_correctly, print_help
-
-def ask_user_input(request, input_string) :
-
-    print(f"\n{print_correctly(input_string)}")
-    return input(f"\n{request} (help 'h') : ").strip().lower()
-
+from src.print_functions import format_, print_help
 
 def number_is_in_expression(expression_chose, size) :
 
@@ -48,6 +42,10 @@ def continue_to_ask_user_input(user_input, isForPhrases, correct_expression_fr) 
 
     return True;
 
+def ask_user_input(request, input_string) :
+
+    print(f"\n{format_(input_string)}")
+    return input(f"\n{request} (help 'h') : ").strip().lower()
 
 def get_user_input(request, specific_request, isForPhrases = False) :
 

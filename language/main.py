@@ -1,4 +1,8 @@
-from src.quiz_expression import quiz_expression
+from src.revision import revision
 
-quiz_expression()
-print("See you :)")
+def main() :
+    revision()
+    print("\n\n[SEE YOU] :)")
+
+if __name__ == '__main__':
+    main()

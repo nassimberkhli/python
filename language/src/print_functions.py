@@ -1,11 +1,11 @@
 import textwrap
 
-def print_correctly(input_string):
+def format_(input_string) :
 
-    if isinstance(input_string, str):
+    if isinstance(input_string, str) :
         return textwrap.fill(input_string, width=40)
 
-    else :
+    elif isinstance(input_string, list) :
         return '\n'.join(
             f"{i+1} - {textwrap.fill(s, width=40)}"
             for i, s in enumerate(input_string))
@@ -13,7 +13,7 @@ def print_correctly(input_string):
 
 def print_help(isForPhrases) :
 
-    print("\n"
+    input("\n"
         + " - '*' 0 ou 1 ou plusieurs caractères\n"
         + " - '*,' relancer\n"
         + " - 'n' refuser\n"
