@@ -1,6 +1,7 @@
 import wordreference as wr
 
-translations, audio_links = wr.define_word("programmer", "enfr")
+# Assuming fetch_translation is the function you want to call
+translations, audio_links = wr.fetch_translation("programmer", "enfr")
 print(audio_links)
 print("translations", translations)
 
