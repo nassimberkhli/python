@@ -7,11 +7,12 @@ from src.user_input_functions import get_user_input
 def find_a_translation(user_word, user_input, translations) :
 
     all_meanings = set()
+    # print(translations)
     for key, translation in translations[0].items() :
 
         if isinstance(translation, dict) :
 
-            if translation["word"].split('[')[0] == user_word :
+            if translation["word"].split(" [")[0] == user_word :
                 all_meanings.update(translation["meanings"])
 
                 if user_input in translation["meanings"] :
@@ -27,7 +28,7 @@ def load_user_words(file_path='backend/data/user_words.txt'):
         print(f"Erreur : Le fichier {file_path} est introuvable.")
         return []
 
-def revision() :
+def revision(specefic_meanings = []) :
 
     user_words = load_user_words()
     if not user_words:
@@ -35,11 +36,12 @@ def revision() :
         return
 
     user_input = ""
+    specefic_meanings = []
 
     while user_words and user_input != 'q':
 
         user_word = random.choice(user_words)
-        translations = wr.define_word(user_word, "enfr")
+        translations = wr.fetch_translation(user_word, "enfr", specefic_meanings)
 
         if not translations:
             print(f"Aucune traduction trouvée pour l'user_word : '{user_word}'")
