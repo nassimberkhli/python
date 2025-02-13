@@ -51,6 +51,19 @@ def load_user_words(file_path='backend/data/user_words.txt'):
         print(f"Erreur : Le fichier {file_path} est introuvable.")
         return []
 
+def get_word(raw_word) :
+
+    match = re.match(r"([a-zA-Z ]+)([0-9 ]*)", raw_word)
+    
+    if match:
+        user_word = match.group(1).strip()
+        specific_meanings = list(map(int, match.group(2).split())) if match.group(2).strip() else []
+    else:
+        user_word = None
+        specific_meanings = []
+    
+    return user_word, specific_meanings, raw_word
+
 def revision(specefic_meanings = []) :
 
     user_words = load_user_words()
@@ -61,12 +74,12 @@ def revision(specefic_meanings = []) :
     user_input = ""
     specefic_meanings = []
 
-    while user_words and user_input != 'q':
+    while user_words and user_input != 'q' :
 
-        user_word = random.choice(user_words)
+        user_word, specefic_meanings, raw_word = get_word(random.choice(user_words))
         translations = wr.fetch_translation(user_word, "enfr", specefic_meanings)
 
-        if not translations:
+        if not translations :
             print(f"Aucune traduction trouvée pour l'user_word : '{user_word}'")
             user_words.remove(user_word)
             continue
@@ -80,7 +93,7 @@ def revision(specefic_meanings = []) :
 
             result = find_a_translation(user_word, user_input, translations)
             if len(user_input) > 0 and len(result) == 0 :
-                user_words.remove(user_word)
+                user_words.remove(raw_word)
                 print(f"\n[CORRECTE]\n")
             else :
                 if len(user_input) == 0 :
