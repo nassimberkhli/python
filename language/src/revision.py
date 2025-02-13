@@ -1,10 +1,33 @@
 import random
+import re
 
 from backend import wordreference as wr
 from src.print_functions import format_
 from src.user_input_functions import get_user_input
 
+def good_translation(user_input, meanings) :
+
+    # print(meanings)
+    if len(user_input) == 0 :
+        return False
+
+    for meaning in meanings:
+        # print(meaning)
+        cleaned_meaning = re.sub(r' \[.*?\]| \(.*?\)|\+ *($| )', '', meaning)
+        
+        if user_input == cleaned_meaning:
+            return True
+    
+    return False
+
 def find_a_translation(user_word, user_input, translations) :
+
+    def flatten(lst):
+        for item in lst:
+            if isinstance(item, list):
+                yield from flatten(item)
+            else:
+                yield item
 
     all_meanings = set()
     # print(translations)
@@ -12,10 +35,10 @@ def find_a_translation(user_word, user_input, translations) :
 
         if isinstance(translation, dict) :
 
-            if translation["word"].split(" [")[0] == user_word :
-                all_meanings.update(translation["meanings"])
+            if translation["word"][0].split(" [")[0] == user_word :
+                all_meanings.update(flatten(translation["meanings"]))
 
-                if user_input in translation["meanings"] :
+                if good_translation(user_input, list(all_meanings)) :
                     return list()
 
     return list(all_meanings)
@@ -56,13 +79,19 @@ def revision(specefic_meanings = []) :
         elif user_input != 'n' :
 
             result = find_a_translation(user_word, user_input, translations)
-            if len(result) == 0 :
+            if len(user_input) > 0 and len(result) == 0 :
                 user_words.remove(user_word)
                 print(f"\n[CORRECTE]\n")
             else :
-                input(f"\n[INCORRECTE] Traduction possible :\n")
-                input(format_(result))
-
+                if len(user_input) == 0 :
+                    print(f"\nTraduction possible :\n")
+                    print(format_(result))
+                else :
+                    input(f"\n[INCORRECTE] Traduction possible :\n")
+                    print(format_(result))
+                    maybe = input("\nIt was correct [y/*] : ")
+                    if maybe == 'y' :
+                        user_words.remove(user_word)
         else :
             user_words.remove(user_word)
 

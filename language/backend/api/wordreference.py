@@ -86,7 +86,7 @@ def extract_translation(row) :
         return {
             "word": clean_text(word_text),
             "definition": clean_text(definition_text),
-            "meanings": [clean_text(meanings_text)],
+            "meanings": clean_text(meanings_text),
             "examples": []
         }
     return {"word": "", "definition": "", "meanings": [], "examples": []}
@@ -101,5 +101,5 @@ def extract_audio_links(soup):
 
 def clean_text(text, type_ = "") :
     if type_ == "meanings" :
-        text = re.sub(r'[\s,]+\b[a-z]{1,4}\d*\b', '', text, flags=re.IGNORECASE).strip()
-    return text.replace('⇒', '').replace(u'\xa0', u' ').replace(u'\u24d8', u'')
+        text = re.sub(r'[\s,]+\b[a-z]{1,4}\d*\b', '', text, flags=re.IGNORECASE)
+    return text.replace('⇒', '').replace(u'\xa0', u' ').replace(u'\u24d8', u'').split(", ")
