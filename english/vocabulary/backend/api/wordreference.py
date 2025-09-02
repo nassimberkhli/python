@@ -1,105 +1,77 @@
-import argparse
-import re
+# ./backend/api/wordreference.py
+# Client HTTP vers l'API WordReference déployée (plus de scraping local)
+
+import os
 import requests
+from .variables import wr_available_dictionaries  # on garde la liste pour la CLI (-l)
 
-from bs4 import BeautifulSoup
-from .variables import URL, wr_available_dictionaries
+API_BASE = os.getenv("WR_API_BASE", "https://api-wordreference-kskt.vercel.app").rstrip("/")
 
-def print_available_dictionaries() :
+
+def print_available_dictionaries():
     print('Code  :  Dictionary\n-------------------')
     for code, name in wr_available_dictionaries:
         print(f"{code} : {name}")
 
-def fetch_translation(word, dict_code, specefic_meanings = []) :
-    html_content = fetch_page(word, dict_code)
-    if html_content :
-        return parse_translation(html_content, specefic_meanings)
-    else:
-        return {}, []  # Return empty structures if fetching fails
 
+def fetch_translation(word: str, dict_code: str, specefic_meanings=None):
+    """
+    Appelle l'API distante et renvoie (translations_dict, audio_links)
+    pour rester compatible avec le code existant (src/revision.py utilise translations[0]).
+    On adapte légèrement le format pour que src/revision.py continue de fonctionner :
+      - 'word' et 'definition' sont enveloppés dans une liste : ['...']
+        (car revision.py accède à translation['word'][0])
+    """
+    if specefic_meanings is None:
+        specefic_meanings = []
 
-def fetch_page(word, dict_code) :
     try:
-        response = requests.get(f"{URL}/{dict_code}/{word}")
-        response.raise_for_status()
-        return response.text
+        # Construction propre de la query string (répéter meanings=)
+        params = {"word": word, "dict": dict_code}
+        for m in specefic_meanings:
+            # requests gère la répétition si on passe une liste sous la même clé
+            params.setdefault("meanings", []).append(int(m))
+
+        resp = requests.get(f"{API_BASE}/translate", params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+
+        # data attendu :
+        # {
+        #   "translation": { "1": { "word": "...", "definition": "...", "meanings": [...], "examples": [...] }, ... },
+        #   "audio_links": ["https://...mp3", ...]
+        # }
+
+        raw_translations = data.get("translation", {}) or {}
+        audio_links = data.get("audio_links", []) or []
+
+        # ⚙️ Adapter le shape pour src/revision.py :
+        # - word -> [word]
+        # - definition -> [definition]
+        # - meanings : déjà liste -> ok
+        # - examples : laissé tel quel (revision.py ne l'utilise pas)
+        adapted = {}
+        for k, v in raw_translations.items():
+            if not isinstance(v, dict):
+                continue
+            word_val = v.get("word", "")
+            def_val = v.get("definition", "")
+            meanings_val = v.get("meanings", []) or []
+            examples_val = v.get("examples", []) or []
+
+            adapted[int(k)] = {
+                "word": [word_val] if isinstance(word_val, str) else word_val,
+                "definition": [def_val] if isinstance(def_val, str) else def_val,
+                "meanings": meanings_val,
+                "examples": examples_val,
+            }
+
+        return adapted, audio_links
+
     except requests.RequestException as e:
-        print(f"Error fetching page: {e}")
-        return None
+        print(f"[wordreference] HTTP error: {e}")
+        return {}, []
+    except ValueError:
+        print("[wordreference] Failed to decode JSON response")
+        return {}, []
 
-def remove_pos_tags(soup_element) :
-    for pos_tag in soup_element.find_all('em', class_='POS2'):
-        pos_tag.decompose()
-
-def update_translation(row, translation) :
-
-    if row.find(class_="ToWrd") :
-        meaning_elements = row.find_all('td')
-
-        if meaning_elements and len(meaning_elements) > 2 :
-            meaning_text = meaning_elements[2].get_text().strip()
-            translation["meanings"].append(clean_text(meaning_text, "meanings"))
-
-    elif row.find(class_="FrEx") or row.find(class_="ToEx") :
-        if row.find(class_="ToEx") :
-            example_text = row.find('td', class_='ToEx').get_text().strip()
-        else :
-            example_text = row.find('td', class_='FrEx').get_text().strip()
-        translation["examples"].append(clean_text(example_text))
-
-def parse_translation(html_content, specific_meanings) :
-    soup = BeautifulSoup(html_content, "html.parser")
-    results = soup.find_all("tr", {'class': ['even', 'odd']})
-    translations = {}
-    translation_number = 0
-    translation = None
-
-    for row in results :
-        if "more" in row.get('class', [1]) :
-            continue
-
-        if row.find(class_="FrWrd") :
-
-            remove_pos_tags(row)
-            translation = extract_translation(row)
-            translation_number += 1
-
-            if translation and (specific_meanings == [] or translation_number in specific_meanings) :
-                    translations[translation_number] = translation
-
-        elif row.find(class_="ToWrd") or row.find(class_="FrEx") or row.find(class_="ToEx") :
-            if translation and (specific_meanings == [] or translation_number in specific_meanings) :
-                update_translation(row, translation)
-
-    if translation and (specific_meanings == [] or translation_number in specific_meanings) :
-        translations[translation_number] = translation
-
-    audio_links = extract_audio_links(soup)
-    return translations, audio_links
-
-def extract_translation(row) :
-    cells = row.find_all('td')
-    if len(cells) > 2:
-        word_text = cells[0].get_text().strip()
-        definition_text = cells[1].get_text().strip()
-        meanings_text = cells[2].get_text().strip()
-        return {
-            "word": clean_text(word_text),
-            "definition": clean_text(definition_text),
-            "meanings": clean_text(meanings_text),
-            "examples": []
-        }
-    return {"word": "", "definition": "", "meanings": [], "examples": []}
-
-def extract_audio_links(soup):
-    try:
-        script = soup.find("div", id="listen_widget").script.string
-        audio_urls = script[18:-3].split(',')
-        return [URL + link.strip()[1:-1] for link in audio_urls]
-    except:
-        return []
-
-def clean_text(text, type_ = "") :
-    if type_ == "meanings" :
-        text = re.sub(r'[\s,]+\b[a-z]{1,4}\d*\b', '', text, flags=re.IGNORECASE)
-    return text.replace('⇒', '').replace(u'\xa0', u' ').replace(u'\u24d8', u'').split(", ")
